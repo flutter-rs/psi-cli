@@ -2,10 +2,12 @@
 import os
 import glob
 import subprocess
+import shutil
 from ..utils import look_for_proj_dir, tmpl_file
 from ..utils.download import download_flutter_engine
 
 REPO = 'https://github.com/flutter-rs/flutter-app-template'
+TAG = 'v0.3.5'
 
 def get_tmpl_config(proj_dir):
     tmplfile_path = os.path.join(proj_dir, '.tmplfiles')
@@ -37,7 +39,7 @@ def create_project(args):
     proj_name = args.proj.replace('_', '-')
     lib_name = proj_name.replace('-', '_')
 
-    subprocess.run(['git', 'clone', REPO])
+    subprocess.run(['git', 'clone', '--branch', TAG, REPO, proj_name])
 
     config = {
         "name": proj_name,
@@ -45,11 +47,11 @@ def create_project(args):
     }
 
     proj_dir = os.path.join(os.getcwd(), proj_name)
-    tmpl_proj(proj_name, config)
+    tmpl_proj(proj_dir, config)
     
-    # remove .tmplfile, useless now
-    tmplfile_path = os.path.join(proj_dir, '.tmplfiles')
-    os.remove(tmplfile_path)
+    # remove .tmplfile, .git
+    os.remove(os.path.join(proj_dir, '.tmplfiles'))
+    shutil.rmtree(os.path.join(proj_dir, '.git'), ignore_errors=True)
 
 def run(args):
     print('🔮  Creating files')
