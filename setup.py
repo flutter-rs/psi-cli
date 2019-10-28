@@ -15,6 +15,7 @@ setuptools.setup(
     license='MIT',
     long_description=long_description,
     long_description_content_type='text/markdown',
+    include_package_data=True,
     install_requires=required,
     url='https://github.com/flutter-rs/psi-cli',
     packages=setuptools.find_packages(),
