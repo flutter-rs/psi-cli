@@ -44,13 +44,11 @@ def get_download_url(version):
         return ''
     return Template(tmpl).substitute(version = version, base_url = base_url)
 
-def download_and_extract(ver):
+def download_and_extract(url, dest, strip=False):
     # requests = importlib.import_module('requests')
-    url = get_download_url(ver)
-    dest = os.path.join(lib_path(), ver)
-    print('Downloading flutter engine from', url, 'to', dest)
     req = requests.get(url)
-    print('Downloaded')
+    print(url + ' downloaded')
+
     os.makedirs(dest, exist_ok=True)
 
     fp = tempfile.NamedTemporaryFile(delete=True)
@@ -59,19 +57,38 @@ def download_and_extract(ver):
 
     print('Extracting files')
     with zipfile.ZipFile(fp) as zf:
-        zf.extractall(dest)
-
-    if sys.platform == 'darwin':
-        subprocess.run([
-            'unzip', 'FlutterEmbedder.framework.zip',
-            '-d', 'FlutterEmbedder.framework'], stdout=subprocess.DEVNULL, cwd=dest)
+        parts = []
+        if strip:
+            files = zf.namelist()
+            print(files)
+            if not files:
+                raise Exception('Empty zip!')
+            root = files[0]
+            for info in zf.infolist():
+                if info.filename.startswith(root):
+                    info.filename = info.filename[len(root):]
+                if info.filename:
+                    parts.append(info)
+        if parts:
+            zf.extractall(dest, parts)
+        else:
+            zf.extractall(dest)
 
     fp.close()
 
 def download_flutter_engine():
     ver = get_flutter_version()
     if not should_download(ver):
-        print('Already downloaded, abort')
+        print('flutter-engine already downloaded.')
         return
 
-    download_and_extract(ver)
+    url = get_download_url(ver)
+    dest = os.path.join(lib_path(), ver)
+    print('Downloading flutter engine from', url, 'to', dest)
+    download_and_extract(url, dest)
+
+    # zip on mac is a double zip file
+    if sys.platform == 'darwin':
+        subprocess.run([
+            'unzip', 'FlutterEmbedder.framework.zip',
+            '-d', 'FlutterEmbedder.framework'], stdout=subprocess.DEVNULL, cwd=dest)

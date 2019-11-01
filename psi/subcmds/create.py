@@ -3,13 +3,13 @@ import os
 import glob
 import subprocess
 import shutil
+import tempfile
 from ..utils import look_for_proj_dir, tmpl_file
-from ..utils.download import download_flutter_engine
+from ..utils.download import download_flutter_engine, download_and_extract
 
-REPO = 'https://github.com/flutter-rs/flutter-app-template'
-TAG = 'v0.3.5'
+ARCHIVE = 'https://github.com/flutter-rs/flutter-app-template/archive/v0.3.5.zip'
 
-def get_tmpl_config(proj_dir):
+def get_tmpl_files(proj_dir):
     tmplfile_path = os.path.join(proj_dir, '.tmplfiles')
     try:
         with open(tmplfile_path) as f:
@@ -26,8 +26,9 @@ def get_tmpl_config(proj_dir):
 
     return tmplfiles
 
-def tmpl_proj(proj_dir, config):
-    tmplfiles = get_tmpl_config(proj_dir)
+def tmpl_proj(proj_dir, config, tmplfiles=[]):
+    if not tmplfiles:
+        tmplfiles = get_tmpl_files(proj_dir)
 
     for pattern in tmplfiles:
         for fp in glob.iglob(os.path.join(proj_dir, pattern)):
@@ -35,29 +36,56 @@ def tmpl_proj(proj_dir, config):
             if os.path.isfile(fp):
                 tmpl_file(fp, config)
 
-def create_project(args):
-    proj_name = args.proj.replace('_', '-')
-    lib_name = proj_name.replace('-', '_')
+def create_project(proj_dir, config):
+    download_and_extract(ARCHIVE, proj_dir, strip=True)
 
-    subprocess.run(['git', 'clone', '--branch', TAG, REPO, proj_name])
-
-    config = {
-        "name": proj_name,
-        "lib_name": lib_name, # underlined version of name
-    }
-
-    proj_dir = os.path.join(os.getcwd(), proj_name)
     tmpl_proj(proj_dir, config)
     
     # remove .tmplfile, .git
     os.remove(os.path.join(proj_dir, '.tmplfiles'))
-    shutil.rmtree(os.path.join(proj_dir, '.git'), ignore_errors=True)
+
+def patch_project(proj_dir, config):
+    ''' add to existing flutter proj
+    '''
+    with tempfile.TemporaryDirectory() as tmpdir:
+        download_and_extract(ARCHIVE, tmpdir, strip=True)
+        tmplfiles = get_tmpl_files(tmpdir)
+        tmpl_proj(tmpdir, config, tmplfiles)
+        shutil.move(os.path.join(tmpdir, 'rust'), proj_dir)
 
 def run(args):
+    if args.proj == '.':
+        # add flutter-rs to existing dir
+        proj_dir = os.getcwd()
+        proj_name = os.path.basename(proj_dir) \
+            .replace('_', '-')
+        created = False
+    else:
+        proj_name = args.proj.replace('_', '-')
+        proj_dir = os.path.join(os.getcwd(), proj_name)
+        created = True
+
     print('🔮  Creating files')
-    create_project(args)
+    lib_name = proj_name.replace('-', '_')
+    config = {
+        "name": proj_name,
+        "lib_name": lib_name, # underlined version of name
+    }
+    if created:
+        create_project(proj_dir, config)
+    else:
+        patch_project(proj_dir, config)
 
     print('🧩  Downloading flutter-engine')
     download_flutter_engine()
 
     print('🍭  Done! Happy coding.')
+    print('')
+    print('Start developing with:')
+    pad = ' ' * 4
+    if created:
+        print(pad + 'cd %s' % proj_name)
+        print(pad + 'psi run --vscode')
+    else:
+        print(pad + 'psi run --vscode')
+        print('PS: You will probably need to override platform with: debugDefaultTargetPlatformOverride = TargetPlatform.android;')

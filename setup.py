@@ -8,7 +8,7 @@ with open('requirements.txt') as file:
 
 setuptools.setup(
     name='psi-cli',
-    version='0.0.3',
+    version='0.0.4',
     author='juju',
     author_email='gliheng@live.com',
     description='flutter-rs devtool',

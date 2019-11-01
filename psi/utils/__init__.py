@@ -67,7 +67,7 @@ def get_flutter_version():
         return read_sdk_version(root)
     else:
         sdk = guess_sdk_path()
-        print("sdk is proballby at", sdk)
+        # print("sdk is proballby at", sdk)
         if sdk:
             return read_sdk_version(sdk)
         else:
