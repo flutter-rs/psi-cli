@@ -1,3 +1,5 @@
+## Replaced with [cargo-flutter](https://github.com/flutter-rs/cargo-flutter)
+
 # psi
 
 flutter-rs devtool
